@@ -1,0 +1,46 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Environment files ─────────────────────────────────────────────────────────
+# .env.example is safe to commit — .env is not
+.env
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── mypy ─────────────────────────────────────────────────────────────────────
+.mypy_cache/
+
+# ── dbt ──────────────────────────────────────────────────────────────────────
+data/dbt/target/
+data/dbt/dbt_packages/
+data/dbt/logs/
+
+# ── Airflow (local only) ──────────────────────────────────────────────────────
+logs/
+airflow.db
+airflow.cfg
+
+# ── ML / data artifacts ───────────────────────────────────────────────────────
+ml/models/*.pkl
+ml/models/*.json
+data/raw/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
