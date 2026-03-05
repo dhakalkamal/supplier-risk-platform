@@ -1,0 +1,226 @@
+{
+  "cik": 789019,
+  "entityName": "TEST COMPANY INC",
+  "facts": {
+    "us-gaap": {
+      "Assets": {
+        "label": "Assets",
+        "description": "Sum of the carrying amounts as of the balance sheet date.",
+        "units": {
+          "USD": [
+            {
+              "end": "2022-06-30",
+              "val": 9000000,
+              "form": "10-K",
+              "accn": "0001193125-22-100000",
+              "fy": 2022,
+              "fp": "FY",
+              "filed": "2022-07-28"
+            },
+            {
+              "end": "2023-06-30",
+              "val": 10000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "AssetsCurrent": {
+        "label": "Assets, Current",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 3000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "Liabilities": {
+        "label": "Liabilities",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 5000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "LiabilitiesCurrent": {
+        "label": "Liabilities, Current",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 1000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "RetainedEarningsAccumulatedDeficit": {
+        "label": "Retained Earnings (Accumulated Deficit)",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 2000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "StockholdersEquity": {
+        "label": "Stockholders' Equity Attributable to Parent",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 5000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "Revenues": {
+        "label": "Revenues",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 8000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "OperatingIncomeLoss": {
+        "label": "Operating Income (Loss)",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 1500000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "NetIncomeLoss": {
+        "label": "Net Income (Loss) Attributable to Parent",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 1200000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "CashAndCashEquivalentsAtCarryingValue": {
+        "label": "Cash and Cash Equivalents, at Carrying Value",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 500000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "LongTermDebt": {
+        "label": "Long-term Debt",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 3000000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "InterestExpense": {
+        "label": "Interest Expense",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 150000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      },
+      "InventoryNet": {
+        "label": "Inventory, Net",
+        "units": {
+          "USD": [
+            {
+              "end": "2023-06-30",
+              "val": 400000,
+              "form": "10-K",
+              "accn": "0001193125-23-201719",
+              "fy": 2023,
+              "fp": "FY",
+              "filed": "2023-07-27"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+# dbt connection profiles — copy to ~/.dbt/profiles.yml and fill in values.
+# Or set POSTGRES_* environment variables and use env_var() references below.
+#
+# dbt docs: https://docs.getdbt.com/docs/core/connect-data-platform/postgres-setup
+
+supplier_risk:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5432
+      user: "{{ env_var('POSTGRES_USER', 'supplier_risk') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'supplier_risk') }}"
+      dbname: supplier_risk
+      schema: pipeline
+      threads: 4
+      keepalives_idle: 0
+
+    prod:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST') }}"
+      port: 5432
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: supplier_risk
+      schema: pipeline
+      threads: 8
+      keepalives_idle: 0
+      connect_timeout: 10

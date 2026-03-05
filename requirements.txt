@@ -1,0 +1,15 @@
+# Production dependencies — pinned versions for reproducibility.
+# Install with: pip install -r requirements.txt
+# Environment: conda activate genai, then pip install to fill gaps.
+
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.6.0
+pydantic-settings==2.1.0
+httpx==0.26.0
+structlog==24.1.0
+aiokafka==0.10.0
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+tenacity==8.2.3
+python-dateutil==2.8.2

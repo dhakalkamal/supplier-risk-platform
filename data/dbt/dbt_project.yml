@@ -1,0 +1,33 @@
+name: 'supplier_risk'
+version: '1.0.0'
+config-version: 2
+
+profile: 'supplier_risk'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  supplier_risk:
+    raw:
+      +materialized: view
+      +schema: pipeline
+    staging:
+      +materialized: table
+      +schema: pipeline
+    marts:
+      +materialized: table
+      +schema: pipeline
+
+vars:
+  # The pipeline schema in Postgres where all dbt tables are written
+  pipeline_schema: pipeline
