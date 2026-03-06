@@ -1,0 +1,318 @@
+version: 2
+
+models:
+
+  - name: dim_suppliers
+    description: >
+      Canonical supplier dimension table. One row per supplier.
+      Source of truth for supplier metadata used across all feature marts.
+      Written by the entity resolution pipeline when a new supplier is confirmed.
+    columns:
+      - name: supplier_id
+        description: "Internal supplier UUID, prefixed with 'sup_'. Primary key."
+        tests:
+          - not_null
+          - unique
+      - name: canonical_name
+        description: "Canonical company name after entity resolution."
+        tests:
+          - not_null
+      - name: country
+        description: "ISO 3166-1 alpha-2 country code of the supplier's primary operations."
+      - name: industry_code
+        description: "NAICS 6-digit industry code. NULL if not yet classified."
+      - name: duns_number
+        description: "Dun & Bradstreet DUNS number. NULL if not available."
+      - name: website
+        description: "Company website URL. NULL if not available."
+      - name: cik
+        description: "SEC Central Index Key if the supplier is SEC-registered. NULL otherwise."
+      - name: created_at
+        description: "Timestamp when this supplier was first added to the registry."
+        tests:
+          - not_null
+      - name: updated_at
+        description: "Timestamp of the most recent update to this supplier's record."
+        tests:
+          - not_null
+      - name: _dbt_ingested_at
+        description: "Timestamp when this dbt model last processed this row."
+        tests:
+          - not_null
+
+  - name: supplier_financial_features
+    description: >
+      Financial risk features per supplier derived from SEC EDGAR filings.
+      Includes liquidity ratios, leverage ratios, and QoQ revenue growth.
+      Only suppliers with a SEC CIK that maps to a canonical supplier_id appear here.
+      NULL values on ratio columns mean the underlying data was insufficient.
+    columns:
+      - name: supplier_id
+        description: "Canonical supplier ID. Foreign key to dim_suppliers."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_suppliers')
+                field: supplier_id
+      - name: cik
+        description: "SEC Central Index Key used to join filings to supplier registry."
+        tests:
+          - not_null
+      - name: period_end
+        description: "End date of the filing period these features are derived from."
+        tests:
+          - not_null
+      - name: altman_z_score
+        description: "Altman Z' Score. NULL if financials insufficient. Z' < 1.23 = distress."
+      - name: going_concern_flag
+        description: "True if auditor issued a going-concern qualification."
+        tests:
+          - not_null
+      - name: current_ratio
+        description: "Current assets / current liabilities. NULL if denominator is zero."
+      - name: quick_ratio
+        description: "(Current assets - inventory) / current liabilities. NULL if denominator is zero."
+      - name: cash_ratio
+        description: "Cash / current liabilities. NULL if denominator is zero."
+      - name: debt_to_equity
+        description: "Long-term debt / shareholders equity. NULL if equity is zero."
+      - name: interest_coverage
+        description: "EBIT / interest expense. NULL if interest expense is zero."
+      - name: revenue_growth_qoq
+        description: "Quarter-over-quarter revenue growth rate. NULL if prior period unavailable."
+      - name: financial_data_staleness_days
+        description: "Days since the period_end date. Used to detect stale financial signals."
+        tests:
+          - not_null
+      - name: financial_data_is_stale
+        description: "True if financial data is older than 180 days."
+        tests:
+          - not_null
+
+  - name: supplier_news_features
+    description: >
+      Rolling news sentiment features per supplier aggregated over 7-day and 30-day windows.
+      Only suppliers with at least one article in the 30-day window appear here.
+      Topic flags are true if ANY article in the window contained that topic.
+    columns:
+      - name: supplier_id
+        description: "Canonical supplier ID. Primary key of this model."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_suppliers')
+                field: supplier_id
+      - name: sentiment_score_7d
+        description: "Average FinBERT sentiment score over the last 7 days. NULL if no articles."
+      - name: sentiment_score_30d
+        description: "Average FinBERT sentiment score over the last 30 days. NULL if no articles."
+      - name: negative_article_count_30d
+        description: "Count of articles with sentiment_label = 'negative' in last 30 days."
+        tests:
+          - not_null
+      - name: total_article_count_30d
+        description: "Total article count in last 30 days."
+        tests:
+          - not_null
+      - name: negative_velocity
+        description: >
+          Negative article daily rate (7d) minus negative article daily rate (30d).
+          Positive value means negative coverage is accelerating.
+      - name: topic_layoff_flag_30d
+        description: "True if any article in the last 30 days mentioned layoffs."
+        tests:
+          - not_null
+      - name: topic_bankruptcy_flag_30d
+        description: "True if any article in the last 30 days mentioned bankruptcy."
+        tests:
+          - not_null
+      - name: topic_strike_flag_30d
+        description: "True if any article in the last 30 days mentioned labour strikes."
+        tests:
+          - not_null
+      - name: topic_disaster_flag_30d
+        description: "True if any article in the last 30 days mentioned a disaster or plant shutdown."
+        tests:
+          - not_null
+      - name: topic_regulatory_flag_30d
+        description: "True if any article in the last 30 days mentioned regulatory action."
+        tests:
+          - not_null
+
+  - name: supplier_shipping_features
+    description: >
+      Rolling shipping volume features per supplier from AIS vessel tracking data.
+      Only suppliers with resolved AIS events in the 30-day window appear here.
+      shipping_anomaly_flag fires when volume z-score exceeds 2 standard deviations.
+    columns:
+      - name: supplier_id
+        description: "Canonical supplier ID. Primary key of this model."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_suppliers')
+                field: supplier_id
+      - name: port_call_count_30d
+        description: "Number of port arrivals attributed to this supplier in the last 30 days."
+        tests:
+          - not_null
+      - name: shipping_volume_delta_30d
+        description: "Fractional change in tonnage vs prior 30-day period. NULL if no prior data."
+      - name: shipping_volume_z_score
+        description: "Z-score of 30d tonnage vs 90d baseline. NULL if stddev is zero."
+      - name: avg_dwell_time_7d
+        description: "Average port dwell hours for arrivals in the last 7 days. NULL if no arrivals."
+      - name: dwell_time_delta
+        description: "Difference between 30d average dwell time and 7d average dwell time."
+      - name: shipping_anomaly_flag
+        description: "True when |shipping_volume_z_score| > 2.0, signalling an unusual volume change."
+
+  - name: supplier_geo_features
+    description: >
+      Geopolitical risk features per supplier based on the supplier's primary country.
+      Every supplier in dim_suppliers appears here (even with zero risk score).
+      country_risk_score is 0.0 when the country has no events in the last 90 days.
+    columns:
+      - name: supplier_id
+        description: "Canonical supplier ID. Primary key of this model."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_suppliers')
+                field: supplier_id
+      - name: country_risk_score
+        description: "Average event severity (0.0–1.0) for the supplier's country over the last 90 days."
+        tests:
+          - not_null
+      - name: country_risk_trend_90d
+        description: >
+          Difference between 30-day avg severity and prior 60-day avg severity.
+          Positive = risk increasing. Negative = risk decreasing.
+        tests:
+          - not_null
+      - name: on_sanctions_list
+        description: "True if the supplier's country is currently on a major sanctions list."
+        tests:
+          - not_null
+      - name: country_under_sanctions
+        description: "True if any geo event in the last 90 days flagged a sanctions event."
+        tests:
+          - not_null
+      - name: supplier_country
+        description: "ISO 3166-1 alpha-2 country code of the supplier. Passed through for transparency."
+
+  - name: supplier_macro_features
+    description: >
+      Macroeconomic features per supplier, matched by NAICS industry code.
+      Industry-specific series (e.g. steel PMI) take precedence over economy-wide series.
+      NULL means the data series is not available — the ML model handles this with np.nan.
+    columns:
+      - name: supplier_id
+        description: "Canonical supplier ID. Primary key of this model."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_suppliers')
+                field: supplier_id
+      - name: commodity_price_delta_30d
+        description: "Average 30-day fractional change in commodity prices relevant to this industry."
+      - name: industry_pmi
+        description: "Most recent manufacturing PMI for this industry (or economy-wide if no match)."
+      - name: high_yield_spread_delta_30d
+        description: "30-day fractional change in the BAML high-yield credit spread. Economy-wide."
+
+  - name: supplier_feature_vector
+    description: >
+      Master feature vector for ML scoring. One row per supplier, joining all 5 signal sources.
+      This is the direct input to the ML pipeline. Column names must match SupplierFeatureVector
+      in ml/features/feature_vector.py exactly — update that model before renaming columns here.
+      NULL = signal unavailable. The ML loader converts NULL to np.nan. Never substitute 0.
+    columns:
+      - name: supplier_id
+        description: "Canonical supplier ID. Primary key."
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_suppliers')
+                field: supplier_id
+      - name: feature_date
+        description: "Date these features were computed (CURRENT_DATE at dbt run time)."
+        tests:
+          - not_null
+      - name: altman_z_score
+        description: "Altman Z' Score. NULL for suppliers without SEC filings."
+      - name: going_concern_flag
+        description: "True if auditor issued going-concern qualification. NULL for non-SEC suppliers."
+      - name: current_ratio
+        description: "Current assets / current liabilities. NULL if data insufficient."
+      - name: quick_ratio
+        description: "(Current assets - inventory) / current liabilities. NULL if data insufficient."
+      - name: debt_to_equity
+        description: "Long-term debt / shareholders equity. NULL if data insufficient."
+      - name: interest_coverage
+        description: "EBIT / interest expense. NULL if data insufficient."
+      - name: revenue_growth_qoq
+        description: "Quarter-over-quarter revenue growth. NULL if insufficient history."
+      - name: financial_data_staleness_days
+        description: "Days since last SEC filing period end. NULL for non-SEC suppliers."
+      - name: financial_data_is_stale
+        description: "True if last financial data is older than 180 days."
+      - name: sentiment_score_7d
+        description: "Average news sentiment over last 7 days. NULL if no recent articles."
+      - name: sentiment_score_30d
+        description: "Average news sentiment over last 30 days. NULL if no recent articles."
+      - name: negative_article_count_30d
+        description: "Count of negative-sentiment articles in last 30 days. NULL if no articles."
+      - name: negative_velocity
+        description: "Acceleration of negative news coverage. NULL if no articles."
+      - name: topic_layoff_flag_30d
+        description: "True if any article in last 30 days mentioned layoffs."
+      - name: topic_bankruptcy_flag_30d
+        description: "True if any article in last 30 days mentioned bankruptcy."
+      - name: topic_strike_flag_30d
+        description: "True if any article in last 30 days mentioned strikes."
+      - name: topic_disaster_flag_30d
+        description: "True if any article in last 30 days mentioned disasters."
+      - name: topic_regulatory_flag_30d
+        description: "True if any article in last 30 days mentioned regulatory action."
+      - name: port_call_count_30d
+        description: "Port arrivals in last 30 days attributed to this supplier."
+      - name: shipping_volume_delta_30d
+        description: "Fractional shipping volume change vs prior 30-day period."
+      - name: shipping_volume_z_score
+        description: "Z-score of 30d shipping volume vs 90d baseline."
+      - name: avg_dwell_time_7d
+        description: "Average vessel dwell time in port over last 7 days (hours)."
+      - name: dwell_time_delta
+        description: "Difference between 30d and 7d average dwell times."
+      - name: shipping_anomaly_flag
+        description: "True when shipping volume z-score exceeds 2 standard deviations."
+      - name: country_risk_score
+        description: "Supplier country average geo event severity over last 90 days."
+      - name: country_risk_trend_90d
+        description: "Direction of country risk change over last 90 days."
+      - name: on_sanctions_list
+        description: "True if supplier's country is on a major sanctions list."
+      - name: country_under_sanctions
+        description: "True if sanctions events detected for supplier's country in last 90 days."
+      - name: commodity_price_delta_30d
+        description: "30-day commodity price change for this supplier's industry."
+      - name: industry_pmi
+        description: "Most recent manufacturing PMI for this supplier's industry."
+      - name: high_yield_spread_delta_30d
+        description: "30-day change in BAML high-yield credit spread."
+      - name: feature_vector_created_at
+        description: "Timestamp when this feature vector row was created."
+        tests:
+          - not_null

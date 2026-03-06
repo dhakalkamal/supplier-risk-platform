@@ -5,11 +5,9 @@ config-version: 2
 profile: 'supplier_risk'
 
 model-paths: ["models"]
-analysis-paths: ["analyses"]
 test-paths: ["tests"]
 seed-paths: ["seeds"]
 macro-paths: ["macros"]
-snapshot-paths: ["snapshots"]
 
 target-path: "target"
 clean-targets:
@@ -18,16 +16,10 @@ clean-targets:
 
 models:
   supplier_risk:
-    raw:
-      +materialized: view
-      +schema: pipeline
     staging:
+      +schema: staging
       +materialized: table
-      +schema: pipeline
+      +on_schema_change: fail    # fail loudly if schema changes unexpectedly
     marts:
+      +schema: marts
       +materialized: table
-      +schema: pipeline
-
-vars:
-  # The pipeline schema in Postgres where all dbt tables are written
-  pipeline_schema: pipeline

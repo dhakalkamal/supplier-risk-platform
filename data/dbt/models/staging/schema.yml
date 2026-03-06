@@ -1,0 +1,319 @@
+version: 2
+
+models:
+
+  - name: stg_sec_financials
+    description: >
+      Cleaned SEC EDGAR financial data. One row per company per reporting period.
+      Deduplicated by keeping the most recently ingested record per (cik, period_end).
+      All financial amounts are in USD. NULL means data was not reported — never 0.
+    columns:
+      - name: filing_key
+        description: "Surrogate primary key: cik || '_' || period_end."
+        tests:
+          - not_null
+          - unique
+      - name: cik
+        description: "SEC Central Index Key, zero-padded to 10 digits."
+        tests:
+          - not_null
+      - name: company_name
+        description: "Company name as reported in the SEC filing."
+        tests:
+          - not_null
+      - name: filing_type
+        description: "Filing type: 10-K, 10-Q, or 8-K."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['10-K', '10-Q', '8-K']
+      - name: filed_date
+        description: "Date the filing was submitted to SEC."
+        tests:
+          - not_null
+      - name: period_end
+        description: "End date of the reporting period covered by the filing."
+        tests:
+          - not_null
+      - name: total_assets
+        description: "Total assets in USD. NULL if not reported."
+      - name: current_assets
+        description: "Current assets in USD. NULL if not reported."
+      - name: total_liabilities
+        description: "Total liabilities in USD. NULL if not reported."
+      - name: current_liabilities
+        description: "Current liabilities in USD. NULL if not reported."
+      - name: retained_earnings
+        description: "Retained earnings in USD. NULL if not reported."
+      - name: shareholders_equity
+        description: "Shareholders equity in USD. NULL if not reported."
+      - name: inventory
+        description: "Inventory in USD. NULL if not reported."
+      - name: cash
+        description: "Cash and cash equivalents in USD. NULL if not reported."
+      - name: long_term_debt
+        description: "Long-term debt in USD. NULL if not reported."
+      - name: revenue
+        description: "Revenue in USD. NULL if not reported."
+      - name: ebit
+        description: "Earnings before interest and taxes in USD. NULL if not reported."
+      - name: net_income
+        description: "Net income in USD. NULL if not reported."
+      - name: interest_expense
+        description: "Interest expense in USD. NULL if not reported."
+      - name: altman_z_score
+        description: >
+          Altman Z' Score (private company formula). NULL if financials were insufficient
+          to compute. Z' < 1.23 = distress zone. Z' > 2.90 = safe zone.
+      - name: going_concern_flag
+        description: "True if the auditor issued a going-concern qualification."
+        tests:
+          - not_null
+      - name: source_url
+        description: "URL of the SEC EDGAR filing document."
+      - name: ingested_at
+        description: "Timestamp when this row was first written to raw.sec_filings."
+        tests:
+          - not_null
+      - name: _dbt_ingested_at
+        description: "Timestamp when this dbt model last processed this row."
+        tests:
+          - not_null
+
+  - name: stg_news_sentiment
+    description: >
+      Cleaned news articles with FinBERT sentiment scores and topic flags.
+      Sourced from enriched.stg_news_sentiment which is written by the news
+      ingestion pipeline. This model applies additional type validation and
+      rejects rows with invalid sentiment scores.
+      One row per article_id (SHA-256 of URL).
+    columns:
+      - name: article_id
+        description: "SHA-256 of article URL. Primary key."
+        tests:
+          - not_null
+          - unique
+      - name: supplier_id
+        description: "Resolved supplier ID. NULL if entity resolution failed."
+      - name: supplier_name_raw
+        description: "Raw company name extracted from article text."
+      - name: title
+        description: "Article headline."
+        tests:
+          - not_null
+      - name: url
+        description: "Canonical URL of the article."
+        tests:
+          - not_null
+      - name: published_at
+        description: "UTC timestamp when the article was published."
+        tests:
+          - not_null
+      - name: source_name
+        description: "Publisher name (e.g. Reuters, Bloomberg)."
+        tests:
+          - not_null
+      - name: sentiment_score
+        description: "FinBERT sentiment score in [-1.0, 1.0]. Negative = bad news."
+        tests:
+          - not_null
+      - name: sentiment_label
+        description: "One of: positive, negative, neutral."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['positive', 'negative', 'neutral']
+      - name: topic_layoff
+        description: "True if article mentions layoffs or workforce reductions."
+        tests:
+          - not_null
+      - name: topic_bankruptcy
+        description: "True if article mentions bankruptcy, insolvency, or Chapter 11."
+        tests:
+          - not_null
+      - name: topic_strike
+        description: "True if article mentions labour strikes or work stoppages."
+        tests:
+          - not_null
+      - name: topic_disaster
+        description: "True if article mentions natural disasters, fires, or plant shutdowns."
+        tests:
+          - not_null
+      - name: topic_regulatory
+        description: "True if article mentions regulatory action, fines, or investigations."
+        tests:
+          - not_null
+      - name: source_credibility
+        description: "Domain credibility score 0.0–1.0 assigned at ingestion time."
+        tests:
+          - not_null
+      - name: word_count
+        description: "Article word count."
+        tests:
+          - not_null
+      - name: processed_at
+        description: "Timestamp when NLP processing completed."
+        tests:
+          - not_null
+      - name: _dbt_ingested_at
+        description: "Timestamp when this dbt model last processed this row."
+        tests:
+          - not_null
+
+  - name: stg_shipping_volume
+    description: >
+      AIS vessel tracking events cleaned and deduplicated.
+      Grain: one row per (mmsi, port_id, event_date, event_type).
+      dwell_hours is only populated for arrival events.
+    columns:
+      - name: ais_event_key
+        description: "Surrogate primary key: mmsi || '_' || port_id || '_' || event_date || '_' || event_type."
+        tests:
+          - not_null
+          - unique
+      - name: event_id
+        description: "Source event UUID from the AIS feed."
+        tests:
+          - not_null
+      - name: mmsi
+        description: "Maritime Mobile Service Identity — unique vessel identifier."
+        tests:
+          - not_null
+      - name: vessel_name
+        description: "Vessel name as broadcast by AIS transponder."
+      - name: imo_number
+        description: "IMO vessel number. More stable than MMSI across ownership changes."
+      - name: supplier_id
+        description: "Resolved supplier ID if vessel ownership maps to a supplier. NULL otherwise."
+      - name: port_id
+        description: "UN/LOCODE of the port."
+        tests:
+          - not_null
+      - name: port_name
+        description: "Human-readable port name."
+      - name: country_code
+        description: "ISO 3166-1 alpha-2 country code of the port."
+        tests:
+          - not_null
+      - name: event_type
+        description: "One of: arrival, departure."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['arrival', 'departure']
+      - name: event_timestamp
+        description: "UTC timestamp of the arrival or departure."
+        tests:
+          - not_null
+      - name: event_date
+        description: "Date portion of event_timestamp. Used for daily aggregations."
+        tests:
+          - not_null
+      - name: cargo_type
+        description: "Cargo type code. NULL if not broadcast."
+      - name: gross_tonnage
+        description: "Vessel gross tonnage. NULL if not broadcast."
+      - name: dwell_hours
+        description: "Hours spent in port. Only populated for arrival events. NULL otherwise."
+      - name: ingested_at
+        description: "Timestamp when this row was written to raw.ais_events."
+        tests:
+          - not_null
+      - name: _dbt_ingested_at
+        description: "Timestamp when this dbt model last processed this row."
+        tests:
+          - not_null
+
+  - name: stg_geo_risk
+    description: >
+      Cleaned geopolitical risk events by country and date.
+      One row per event_id, deduplicated by most recently ingested.
+    columns:
+      - name: event_id
+        description: "Unique event identifier (UUID). Primary key."
+        tests:
+          - not_null
+          - unique
+      - name: country_code
+        description: "ISO 3166-1 alpha-2 country code where the event occurred."
+        tests:
+          - not_null
+      - name: event_type
+        description: "Event category: conflict, sanction, natural_disaster, political_instability."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['conflict', 'sanction', 'natural_disaster', 'political_instability']
+      - name: event_date
+        description: "Date the event occurred or was reported."
+        tests:
+          - not_null
+      - name: severity_score
+        description: "Severity score 0.0–1.0. Higher = more severe."
+        tests:
+          - not_null
+      - name: on_sanctions_list
+        description: "True if the country is on a major sanctions list (OFAC, EU, UN)."
+        tests:
+          - not_null
+      - name: description
+        description: "Short description of the event."
+      - name: source_name
+        description: "Data source name (e.g. ACLED, GDELT, OFAC)."
+        tests:
+          - not_null
+      - name: ingested_at
+        description: "Timestamp when this row was written to raw.geo_events."
+        tests:
+          - not_null
+      - name: _dbt_ingested_at
+        description: "Timestamp when this dbt model last processed this row."
+        tests:
+          - not_null
+
+  - name: stg_macro_indicators
+    description: >
+      Cleaned macroeconomic time-series data. One row per (series_id, series_date).
+      value is NULL when data is not available for a date — never substitute 0.
+    columns:
+      - name: series_key
+        description: "Surrogate primary key: series_id || '_' || series_date."
+        tests:
+          - not_null
+          - unique
+      - name: series_id
+        description: "Unique series identifier (e.g. FRED:T10Y2Y, WB:PMI_MFG_US)."
+        tests:
+          - not_null
+      - name: series_name
+        description: "Human-readable series name."
+        tests:
+          - not_null
+      - name: series_date
+        description: "Date of the observation."
+        tests:
+          - not_null
+      - name: industry_code
+        description: "NAICS industry code this series applies to. NULL for economy-wide series."
+      - name: value
+        description: "Observed value. NULL when data is not available — never 0."
+      - name: unit
+        description: "Unit of measurement (e.g. percent, index, USD/barrel)."
+        tests:
+          - not_null
+      - name: source_name
+        description: "Data source name (e.g. FRED, WorldBank, EIA)."
+        tests:
+          - not_null
+      - name: ingested_at
+        description: "Timestamp when this row was written to raw.macro_series."
+        tests:
+          - not_null
+      - name: _dbt_ingested_at
+        description: "Timestamp when this dbt model last processed this row."
+        tests:
+          - not_null
