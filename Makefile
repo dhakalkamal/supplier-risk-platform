@@ -32,7 +32,7 @@ ingest-sec:
 	python -m data.ingestion.sec_edgar.scraper --run-once --since-date yesterday
 
 score:
-	python -m ml.serving.run_scoring --run-once
+	python -m ml.scoring.run_scoring
 
 dbt-run:
 	dbt run --project-dir data/dbt --profiles-dir data/dbt
