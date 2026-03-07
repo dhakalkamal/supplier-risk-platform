@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import pytest
 from starlette.testclient import TestClient
 
 from backend.app.repositories.settings_repository import InMemorySettingsRepository

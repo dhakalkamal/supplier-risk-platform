@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import pytest
 from starlette.testclient import TestClient
 
-from backend.app.repositories.score_repository import InMemoryScoreRepository, SupplierScore
+from backend.app.repositories.score_repository import InMemoryScoreRepository
 from backend.app.repositories.supplier_repository import (
     InMemorySupplierRepository,
     PortfolioSupplierRecord,

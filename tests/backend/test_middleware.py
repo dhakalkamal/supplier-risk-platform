@@ -6,17 +6,16 @@ import base64
 import json
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from starlette.testclient import TestClient
 
 from backend.app.dependencies import (
+    TenantContext,
     get_alert_repository,
     get_current_tenant,
     get_news_repository,
     get_score_repository,
     get_settings_repository,
     get_supplier_repository,
-    TenantContext,
 )
 from backend.app.main import create_app
 from backend.app.repositories.alert_repository import InMemoryAlertRepository
@@ -25,10 +24,15 @@ from backend.app.repositories.score_repository import InMemoryScoreRepository
 from backend.app.repositories.settings_repository import InMemorySettingsRepository
 from backend.app.repositories.supplier_repository import InMemorySupplierRepository
 
+
 def _make_fake_jwt(tenant_id: str = "10000000-0000-0000-0000-000000000001") -> str:
     """Build a structurally valid JWT with no real signature (for rate-limit extraction)."""
-    hdr = base64.urlsafe_b64encode(json.dumps({"alg": "RS256", "typ": "JWT"}).encode()).decode().rstrip("=")
-    pay = base64.urlsafe_b64encode(json.dumps({"tenant_id": tenant_id, "sub": "usr_test"}).encode()).decode().rstrip("=")
+    hdr = base64.urlsafe_b64encode(
+        json.dumps({"alg": "RS256", "typ": "JWT"}).encode()
+    ).decode().rstrip("=")
+    pay = base64.urlsafe_b64encode(
+        json.dumps({"tenant_id": tenant_id, "sub": "usr_test"}).encode()
+    ).decode().rstrip("=")
     return f"{hdr}.{pay}.fakesig"
 
 
@@ -124,7 +128,6 @@ class TestRateLimitMiddleware:
 class TestErrorHandler:
     def test_unhandled_exception_returns_500_not_stack_trace(self) -> None:
         """Unhandled exceptions must return INTERNAL_ERROR, not a raw traceback."""
-        from unittest.mock import patch
 
         app = create_app()
         app.router.on_startup.clear()

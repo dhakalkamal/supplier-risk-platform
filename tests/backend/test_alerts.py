@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import pytest
 from starlette.testclient import TestClient
 
 from backend.app.repositories.alert_repository import InMemoryAlertRepository
@@ -14,7 +13,9 @@ def _now() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-def _seed_alert(repo: InMemoryAlertRepository, alert_id: str = "alr_00000001", status: str = "new") -> None:
+def _seed_alert(
+    repo: InMemoryAlertRepository, alert_id: str = "alr_00000001", status: str = "new"
+) -> None:
     repo.seed_supplier_name("sup_abc123", "Acme Corp")
     repo.seed_alert(
         {

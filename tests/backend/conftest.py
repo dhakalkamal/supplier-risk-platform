@@ -6,13 +6,11 @@ No real Postgres, Redis, or Kafka required.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from starlette.testclient import TestClient
-
-from unittest.mock import MagicMock
 
 from backend.app.dependencies import (
     TenantContext,
