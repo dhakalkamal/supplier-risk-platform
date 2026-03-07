@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     # Comma-separated list of allowed origins. Use * only in local dev.
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
+    # ── SendGrid (alert email dispatch) ───────────────────────────────────────
+    # Leave empty to disable sending (dev mode logs the email instead).
+    sendgrid_api_key: str = ""
+    email_from: str = "alerts@supplierrisk.io"
+    email_enabled: bool = False  # set True in staging/prod
+
     # ── OpenAI (entity resolution Stage 3) ────────────────────────────────────
     openai_api_key: str = ""
     llm_resolution_daily_limit: int = 200

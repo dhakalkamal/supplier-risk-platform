@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.v1 import api_v1_router
 from backend.app.api.v1.routes.health import router as health_router
+from backend.app.api.v1.routes.websocket import router as websocket_router
 from backend.app.config import get_settings
 from backend.app.db.connection import close_pool, create_pool
 from backend.app.db.redis_client import close_redis, create_redis
 from backend.app.middleware.error_handler import register_exception_handlers
 from backend.app.middleware.rate_limit import RateLimitMiddleware
 from backend.app.middleware.request_id import RequestIDMiddleware
+from backend.app.services.websocket_manager import websocket_manager
 
 log = structlog.get_logger()
 
@@ -52,6 +56,7 @@ def create_app() -> FastAPI:
     # Routers
     app.include_router(health_router)
     app.include_router(api_v1_router, prefix="/api/v1")
+    app.include_router(websocket_router, prefix="/api/v1")
 
     @app.on_event("startup")
     async def on_startup() -> None:
@@ -59,6 +64,8 @@ def create_app() -> FastAPI:
         app.state.db_pool = await create_pool(cfg)
         try:
             app.state.redis = await create_redis(cfg)
+            websocket_manager.set_redis(app.state.redis)
+            asyncio.create_task(websocket_manager.start_redis_listener())
         except Exception as exc:
             log.warning("redis.startup_failed", error=str(exc))
             app.state.redis = None

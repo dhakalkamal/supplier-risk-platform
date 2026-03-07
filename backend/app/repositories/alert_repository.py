@@ -91,6 +91,60 @@ class AlertRepository(Protocol):
         """
         ...
 
+    async def insert_alert(self, alert: "AlertRecord") -> str:
+        """Persist a new alert. Returns the generated alert_id (alr_ prefixed)."""
+        ...
+
+    async def has_recent_alert(
+        self,
+        supplier_id: str,
+        alert_type: str,
+        tenant_id: str,
+        within_hours: int = 24,
+    ) -> bool:
+        """Return True if a non-dismissed alert of this type exists within window."""
+        ...
+
+
+# ---------------------------------------------------------------------------
+# Alert record — internal model used by the alert engine
+# ---------------------------------------------------------------------------
+
+
+class AlertRecord:
+    """Internal alert data created by AlertEngine before persistence."""
+
+    __slots__ = (
+        "supplier_id",
+        "tenant_id",
+        "alert_type",
+        "severity",
+        "title",
+        "message",
+        "metadata",
+        "fired_at",
+    )
+
+    def __init__(
+        self,
+        supplier_id: str,
+        tenant_id: str,
+        alert_type: str,
+        severity: str,
+        title: str,
+        message: str,
+        metadata: dict[str, Any],
+        fired_at: datetime | None = None,
+    ) -> None:
+        self.supplier_id = supplier_id
+        self.tenant_id = tenant_id
+        self.alert_type = alert_type
+        self.severity = severity
+        self.title = title
+        self.message = message
+        self.metadata = metadata
+        self.fired_at = fired_at or _now()
+
 
 # ---------------------------------------------------------------------------
 # InMemory implementation — for unit tests
@@ -169,6 +223,44 @@ class InMemoryAlertRepository:
             status=alert["status"],
             note=alert.get("note"),
             updated_at=now,
+        )
+
+    async def insert_alert(self, alert: AlertRecord) -> str:
+        alert_id = _alr_id(uuid.uuid4())
+        self._alerts[alert_id] = {
+            "alert_id": alert_id,
+            "supplier_id": alert.supplier_id,
+            "tenant_id": alert.tenant_id,
+            "alert_type": alert.alert_type,
+            "severity": alert.severity,
+            "title": alert.title,
+            "message": alert.message,
+            "metadata": alert.metadata,
+            "status": "new",
+            "note": None,
+            "fired_at": alert.fired_at,
+            "read_at": None,
+            "resolved_at": None,
+        }
+        return alert_id
+
+    async def has_recent_alert(
+        self,
+        supplier_id: str,
+        alert_type: str,
+        tenant_id: str,
+        within_hours: int = 24,
+    ) -> bool:
+        from datetime import timedelta
+
+        cutoff = _now() - timedelta(hours=within_hours)
+        return any(
+            a.get("supplier_id") == supplier_id
+            and a.get("alert_type") == alert_type
+            and a.get("tenant_id") == tenant_id
+            and a.get("status") != "dismissed"
+            and a.get("fired_at", _now()) > cutoff
+            for a in self._alerts.values()
         )
 
 
@@ -311,6 +403,55 @@ class PostgresAlertRepository:
             note=note,
             updated_at=now,
         )
+
+    async def insert_alert(self, alert: AlertRecord) -> str:  # pragma: no cover
+        import json as _json
+
+        new_id = uuid.uuid4()
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO alerts
+                    (id, supplier_id, tenant_id, alert_type, severity,
+                     title, message, metadata, status, fired_at)
+                VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8::jsonb, 'new', $9)
+                """,
+                new_id,
+                alert.supplier_id,
+                alert.tenant_id,
+                alert.alert_type,
+                alert.severity,
+                alert.title,
+                alert.message,
+                _json.dumps(alert.metadata),
+                alert.fired_at,
+            )
+        return _alr_id(new_id)
+
+    async def has_recent_alert(  # pragma: no cover
+        self,
+        supplier_id: str,
+        alert_type: str,
+        tenant_id: str,
+        within_hours: int = 24,
+    ) -> bool:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT 1 FROM alerts
+                WHERE supplier_id = $1
+                  AND alert_type = $2
+                  AND tenant_id = $3::uuid
+                  AND status != 'dismissed'
+                  AND fired_at > NOW() - ($4 || ' hours')::interval
+                LIMIT 1
+                """,
+                supplier_id,
+                alert_type,
+                tenant_id,
+                str(within_hours),
+            )
+        return row is not None
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-.PHONY: setup dev down test lint ingest-sec dbt-run score help
+.PHONY: setup dev down test lint ingest-sec dbt-run score worker consume-scores help
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +36,12 @@ score:
 
 dbt-run:
 	dbt run --project-dir data/dbt --profiles-dir data/dbt
+
+worker:
+	conda run -n genai celery -A backend.app.worker.celery_app worker --loglevel=info -Q notifications,websocket
+
+consume-scores:
+	conda run -n genai python -m backend.app.consumers.scores_consumer
 
 # ── Help ──────────────────────────────────────────────────────────────────────
 

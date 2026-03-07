@@ -25,6 +25,8 @@ omit = [
     "backend/app/main.py",      # App factory wiring tested via integration tests (Phase 3)
     "backend/app/db/connection.py",    # asyncpg pool — requires live Postgres
     "backend/app/db/redis_client.py",  # Redis client — requires live Redis
+    "data/pipeline/resolve_cli.py",    # CLI entry point — tested via integration tests
+    "backend/app/consumers/scores_consumer.py",  # Kafka consumer loop — requires live Kafka
 ]
 
 [tool.coverage.report]
