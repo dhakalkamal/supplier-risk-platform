@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     auth0_domain: str = ""
     auth0_audience: str = ""
 
+    # ── CORS ──────────────────────────────────────────────────────────────────
+    # Comma-separated list of allowed origins. Use * only in local dev.
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
     # ── OpenAI (entity resolution Stage 3) ────────────────────────────────────
     openai_api_key: str = ""
     llm_resolution_daily_limit: int = 200

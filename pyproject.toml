@@ -21,6 +21,16 @@ addopts = "-v"
 
 [tool.coverage.run]
 omit = [
-    "data/dags/*",       # Airflow DAGs require live Airflow context — not unit-testable
-    "backend/app/main.py",  # FastAPI app factory tested via integration tests (Phase 3)
+    "data/dags/*",              # Airflow DAGs require live Airflow context
+    "backend/app/main.py",      # App factory wiring tested via integration tests (Phase 3)
+    "backend/app/db/connection.py",    # asyncpg pool — requires live Postgres
+    "backend/app/db/redis_client.py",  # Redis client — requires live Redis
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "class Postgres",          # Postgres implementations require a live DB (integration tests)
+    "async def _fetch_jwks",   # Auth0 JWKS fetch — requires live Auth0
+    "def _decode_jwt",         # JWT RS256 validation — requires real JWKS keys
 ]
