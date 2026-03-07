@@ -25,13 +25,13 @@ Redis = aioredis.Redis  # re-export for type hints
 
 async def create_redis(settings: Settings) -> aioredis.Redis:
     """Create and return an async Redis client. Called once at startup."""
-    client: aioredis.Redis = aioredis.from_url(
+    client: aioredis.Redis = aioredis.from_url(  # type: ignore[no-untyped-call]
         settings.redis_url,
         decode_responses=True,
         socket_connect_timeout=5,
         socket_timeout=5,
     )
-    await client.ping()  # type: ignore[misc]
+    await client.ping()
     log.info("redis.connected", url=settings.redis_url)
     return client
 
