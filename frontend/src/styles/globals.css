@@ -1,0 +1,49 @@
+@import '@fontsource/dm-sans/400.css';
+@import '@fontsource/dm-sans/500.css';
+@import '@fontsource/dm-serif-display/400.css';
+@import 'tailwindcss';
+
+:root {
+  /* Background */
+  --color-bg-base:        #0F1117;
+  --color-bg-surface:     #1A1D27;
+  --color-bg-elevated:    #242736;
+  --color-bg-input:       #1F2232;
+
+  /* Risk colours */
+  --color-risk-high:      #EF4444;
+  --color-risk-high-bg:   #450A0A;
+  --color-risk-medium:    #F59E0B;
+  --color-risk-medium-bg: #451A03;
+  --color-risk-low:       #22C55E;
+  --color-risk-low-bg:    #052E16;
+
+  /* Brand */
+  --color-brand:          #6366F1;
+  --color-brand-hover:    #4F46E5;
+
+  /* Text */
+  --color-text-primary:   #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #475569;
+
+  /* Borders */
+  --color-border:         #2D3147;
+  --color-border-focus:   #6366F1;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: 'DM Sans', sans-serif;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes highlightFlash {
+  0%   { background-color: rgb(120 80 0 / 0.4); }
+  100% { background-color: transparent; }
+}

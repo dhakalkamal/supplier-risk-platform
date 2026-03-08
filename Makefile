@@ -1,4 +1,4 @@
-.PHONY: setup dev down test lint ingest-sec dbt-run score worker consume-scores help
+.PHONY: setup dev down test lint ingest-sec dbt-run score worker consume-scores frontend-dev frontend-build frontend-lint help
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,17 @@ worker:
 consume-scores:
 	conda run -n genai python -m backend.app.consumers.scores_consumer
 
+# ── Frontend ──────────────────────────────────────────────────────────────────
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build
+
+frontend-lint:
+	cd frontend && npm run lint && npm run typecheck
+
 # ── Help ──────────────────────────────────────────────────────────────────────
 
 help:
@@ -54,4 +65,7 @@ help:
 	@echo "  make lint        Run ruff + mypy"
 	@echo "  make ingest-sec  Trigger SEC EDGAR ingestion manually (one run)"
 	@echo "  make score       Trigger scoring run manually (one run)"
-	@echo "  make dbt-run     Run dbt models against Postgres pipeline schema"
+	@echo "  make dbt-run          Run dbt models against Postgres pipeline schema"
+	@echo "  make frontend-dev     Start Vite dev server (http://localhost:5173)"
+	@echo "  make frontend-build   Production build (dist/)"
+	@echo "  make frontend-lint    Run ESLint + TypeScript typecheck"
