@@ -26,6 +26,24 @@ Confirm:
 
 ---
 
+## KNOWN ISSUES FROM LOCAL TESTING (fix these first, before anything else)
+
+These were found during manual local testing — fix them before starting Step 1.
+
+1. **Supplier resolve not querying Postgres** — `POST /api/v1/suppliers/resolve` uses
+   the in-memory `EntityResolver` loaded from an env var, not the Postgres `suppliers`
+   table. The Add Supplier typeahead returns no results. Fix: the resolve endpoint should
+   query `suppliers` table directly using ILIKE on canonical_name and aliases, then run
+   entity resolution on the results.
+
+2. **Dev bypass UUID format** — already fixed in code, but document in `.env.example`:
+   `AUTH0_DOMAIN=` must be empty (not a placeholder) for dev bypass to activate.
+
+3. **docker-compose ARM images** — already fixed. bitnami/zookeeper replaced with
+   confluentinc/cp-zookeeper:7.5.0, mailhog replaced with axllent/mailpit:latest.
+
+Fix issue 1 first — it blocks all manual testing of the add supplier flow.
+
 ## RULES FOR THIS SESSION
 
 - Never commit real Auth0 credentials, API keys, or secrets — `.env` only.
