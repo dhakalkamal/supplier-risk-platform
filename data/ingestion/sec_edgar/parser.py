@@ -103,26 +103,35 @@ class SECFinancialsParser:
         return None
 
     def extract_financials(
-        self, cik: str, company_facts: dict[str, Any]
+        self, cik: str, company_facts: Any
     ) -> FinancialSnapshot:
         """Extract a FinancialSnapshot from raw XBRL company facts.
 
         Args:
             cik: Zero-padded CIK string.
-            company_facts: Raw dict from /api/xbrl/companyfacts/CIK{cik}.json.
+            company_facts: CompanyFacts Pydantic model or raw dict from
+                /api/xbrl/companyfacts/CIK{cik}.json.
 
         Returns:
             FinancialSnapshot with all available fields populated and
             altman_z_score computed. going_concern_flag defaults to False
             (caller must set it after analysing filing text).
         """
-        gaap: dict[str, Any] = company_facts.get("facts", {}).get("us-gaap", {})
+        # Support both CompanyFacts Pydantic model and raw dict (tests / legacy callers)
+        if hasattr(company_facts, "facts"):
+            facts_dict: dict[str, Any] = company_facts.facts
+            entity_name: str = getattr(company_facts, "entity_name", "")
+        else:
+            facts_dict = company_facts.get("facts", {})
+            entity_name = company_facts.get("entityName", "")
+
+        gaap: dict[str, Any] = facts_dict.get("us-gaap", {})
         snapshot = self._build_snapshot(cik, gaap)
         snapshot.altman_z_score = self.compute_altman_z_score(snapshot)
         log.info(
             "sec_edgar.financials_extracted",
             cik=cik,
-            entity=company_facts.get("entityName", ""),
+            entity=entity_name,
             period_end=str(snapshot.period_end),
             z_score=snapshot.altman_z_score,
         )

@@ -1,0 +1,12 @@
+supplier_risk:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5432
+      user: supplier_risk
+      password: supplier_risk
+      dbname: supplier_risk
+      schema: public
+      threads: 4
