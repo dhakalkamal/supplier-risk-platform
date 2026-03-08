@@ -1,4 +1,4 @@
-.PHONY: setup dev down test lint ingest-sec dbt-run score worker consume-scores frontend-dev frontend-build frontend-lint help
+.PHONY: setup dev down test lint ingest-sec dbt-run score worker consume-scores frontend-dev frontend-build frontend-lint docker-build docker-prod deploy-schema help
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -54,6 +54,25 @@ frontend-build:
 frontend-lint:
 	cd frontend && npm run lint && npm run typecheck
 
+# ── Docker production ─────────────────────────────────────────────────────────
+
+docker-build:
+	docker-compose -f docker-compose.prod.yml build
+
+docker-prod:
+	docker-compose -f docker-compose.prod.yml up
+
+deploy-schema:
+	railway run python -c "\
+import asyncio, asyncpg, pathlib, os; \
+async def apply(): \
+    conn = await asyncpg.connect(os.environ['DATABASE_URL']); \
+    sql = pathlib.Path('backend/app/db/migrations/001_initial_schema.sql').read_text(); \
+    await conn.execute(sql); \
+    await conn.close(); \
+    print('Schema applied on Railway'); \
+asyncio.run(apply())"
+
 # ── Help ──────────────────────────────────────────────────────────────────────
 
 help:
@@ -69,3 +88,6 @@ help:
 	@echo "  make frontend-dev     Start Vite dev server (http://localhost:5173)"
 	@echo "  make frontend-build   Production build (dist/)"
 	@echo "  make frontend-lint    Run ESLint + TypeScript typecheck"
+	@echo "  make docker-build     Build prod Docker images (backend + frontend)"
+	@echo "  make docker-prod      Run prod Docker stack locally (docker-compose.prod.yml)"
+	@echo "  make deploy-schema    Apply DB migration on Railway (requires railway CLI)"

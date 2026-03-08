@@ -1,0 +1,82 @@
+# Production compose — no Airflow, no MailHog/Mailpit, no Kafka (handled by AWS MSK in prod).
+# Start with: make docker-prod
+# Build only:  make docker-build
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: supplier_risk
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/supplier_risk
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: prod
+      DEBUG: "false"
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      SEC_EDGAR_USER_AGENT: ${SEC_EDGAR_USER_AGENT}
+      NEWS_API_KEY: ${NEWS_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:-alerts@supplierrisk.io}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: celery -A backend.app.worker.celery_app worker --loglevel=info -Q notifications,websocket
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/supplier_risk
+      REDIS_URL: redis://redis:6379/0
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:-alerts@supplierrisk.io}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
