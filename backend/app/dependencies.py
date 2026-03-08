@@ -147,8 +147,10 @@ async def get_current_tenant(
     if not settings.auth0_domain:
         log.debug("auth.dev_bypass", reason="auth0_domain not configured")
         return TenantContext(
-            tenant_id="dev-tenant-00000000-0000-0000-0000-000000000000",
-            user_id="dev-user-00000000-0000-0000-0000-000000000000",
+            #tenant_id="dev-tenant-00000000-0000-0000-0000-000000000000",
+            tenant_id = "00000000-0000-0000-0000-000000000000",
+            #user_id="dev-user-00000000-0000-0000-0000-000000000000",
+            user_id="00000000-0000-0000-0000-000000000001",
             role="admin",
             plan="enterprise",
             email="dev@localhost",
