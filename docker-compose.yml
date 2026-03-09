@@ -68,63 +68,91 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── Airflow ────────────────────────────────────────────────────────────────
-  #airflow:
-  #  image: apache/airflow:2.8.0
-  #  depends_on:
-  #    postgres:
-  #      condition: service_healthy
-  #  environment:
-  #    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-  #    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://supplier_risk:supplier_risk@postgres:5432/supplier_risk
-  #    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-  #    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
-  #    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-  #    _AIRFLOW_DB_UPGRADE: "true"
-  #    _AIRFLOW_WWW_USER_CREATE: "true"
-  #    _AIRFLOW_WWW_USER_PASSWORD: admin
-  #  volumes:
-  #    - ./data/dags:/opt/airflow/dags
-  #    - airflow_logs:/opt/airflow/logs
-  #  ports:
-  #    - "8080:8080"
-  #  command: webserver
-  #  healthcheck:
-  #    test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
-  #    interval: 30s
-  #    timeout: 10s
-  #    retries: 5
-  #  restart: unless-stopped
+  # ── Airflow Init (runs once to set up DB and admin user) ───────────────────
+  airflow-init:
+    image: apache/airflow:2.8.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://supplier_risk:supplier_risk@postgres:5432/supplier_risk
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+      _AIRFLOW_WWW_USER_FIRSTNAME: Admin
+      _AIRFLOW_WWW_USER_LASTNAME: User
+      _AIRFLOW_WWW_USER_EMAIL: admin@example.com
+      _AIRFLOW_WWW_USER_ROLE: Admin
+    volumes:
+      - ./data/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - airflow_logs:/opt/airflow/logs
+    command: version
+    restart: "no"   # runs once only
 
-  #airflow-scheduler:
-  #  image: apache/airflow:2.8.0
-  #  depends_on:
-  #    airflow:
-  #      condition: service_healthy
-  #  environment:
-  #    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-  #    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://supplier_risk:supplier_risk@postgres:5432/supplier_risk
-  #    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-  #    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-  #  volumes:
-  #    - ./data/dags:/opt/airflow/dags
-  #    - airflow_logs:/opt/airflow/logs
-  #  command: scheduler
-  #  restart: unless-stopped
+  # ── Airflow Webserver ──────────────────────────────────────────────────────
+  airflow:
+    image: apache/airflow:2.8.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://supplier_risk:supplier_risk@postgres:5432/supplier_risk
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      _PIP_ADDITIONAL_REQUIREMENTS: "structlog aiokafka asyncpg"  
 
-  # ── MailHog (email preview) ────────────────────────────────────────────────
-  #mailhog:
-  #  image: mailhog/mailhog:latest
-  #  ports:
-  #    - "1025:1025"   # SMTP
-  #    - "8025:8025"   # Web UI
-  #  healthcheck:
-  #    test: ["CMD-SHELL", "wget -q --spider http://localhost:8025 || exit 1"]
-  #    interval: 10s
-  #    timeout: 5s
-  #    retries: 3
-  #  restart: unless-stopped
+      # So DAGs can find your data/ modules
+      PYTHONPATH: /opt/airflow
+      # Postgres connection for your pipeline consumers
+      DATABASE_URL: postgresql://supplier_risk:supplier_risk@postgres:5432/supplier_risk
+      # Kafka connection for your pipeline consumers
+      KAFKA_BOOTSTRAP: kafka:9092
+    volumes:
+      - ./data/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
 
+  # ── Airflow Scheduler ──────────────────────────────────────────────────────
+  airflow-scheduler:
+    image: apache/airflow:2.8.0
+    depends_on:
+      airflow:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://supplier_risk:supplier_risk@postgres:5432/supplier_risk
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      PYTHONPATH: /opt/airflow
+      DATABASE_URL: postgresql://supplier_risk:supplier_risk@postgres:5432/supplier_risk
+      KAFKA_BOOTSTRAP: kafka:9092
+      _PIP_ADDITIONAL_REQUIREMENTS: "structlog aiokafka asyncpg"
+
+    volumes:
+      - ./data/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - airflow_logs:/opt/airflow/logs
+    command: scheduler
+    restart: unless-stopped
+
+  # ── Mailpit (email preview) ────────────────────────────────────────────────
   mailpit:
     image: axllent/mailpit:latest
     ports:
@@ -133,4 +161,4 @@ services:
 
 volumes:
   postgres_data:
-  #airflow_logs:
+  airflow_logs:
